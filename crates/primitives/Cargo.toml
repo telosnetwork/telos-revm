@@ -93,3 +93,4 @@ c-kzg = [
     "dep:once_cell",
     "dep:derive_more",
 ]
+telos = []

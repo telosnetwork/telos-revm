@@ -128,6 +128,11 @@ impl Env {
 
         // Check if the transaction's chain id is correct
         if let Some(tx_chain_id) = self.tx.chain_id {
+            #[cfg(feature = "telos")]
+            if tx_chain_id != self.cfg.chain_id && self.tx.chain_id != Some(3) {
+                return Err(InvalidTransaction::InvalidChainId);
+            }
+            #[cfg(not(feature = "telos"))]
             if tx_chain_id != self.cfg.chain_id {
                 return Err(InvalidTransaction::InvalidChainId);
             }
