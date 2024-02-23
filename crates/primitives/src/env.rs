@@ -239,6 +239,11 @@ impl Env {
                 // Add transaction cost to balance to ensure execution doesn't fail.
                 account.info.balance = balance_check;
             } else {
+                #[cfg(feature = "telos")]
+                if self.tx.caller == Address::ZERO {
+                    account.info.balance = balance_check;
+                    return Ok(());
+                }
                 return Err(InvalidTransaction::LackOfFundForMaxFee {
                     fee: Box::new(balance_check),
                     balance: Box::new(account.info.balance),

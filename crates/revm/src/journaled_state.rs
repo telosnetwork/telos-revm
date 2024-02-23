@@ -146,6 +146,10 @@ impl JournaledState {
             return None;
         }
         Self::touch_account(self.journal.last_mut().unwrap(), &address, account);
+        #[cfg(feature = "telos")]
+        if address == Address::ZERO {
+            return Some(1)
+        }
         self.journal
             .last_mut()
             .unwrap()
@@ -187,6 +191,10 @@ impl JournaledState {
             return Ok(Some(InstructionResult::OverflowPayment));
         };
         *to_balance = to_balance_decr;
+        #[cfg(feature = "telos")]
+        if *to == Address::ZERO && self.depth == 1 {
+            *to_balance = to_balance.checked_sub(balance).unwrap();
+        }
         // Overflow of U256 balance is not possible to happen on mainnet. We don't bother to return funds from from_acc.
 
         self.journal
