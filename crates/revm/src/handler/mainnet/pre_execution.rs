@@ -63,9 +63,18 @@ pub fn deduct_caller_inner<SPEC: Spec>(caller_account: &mut Account, env: &Env) 
     if matches!(env.tx.transact_to, TransactTo::Call(_)) {
         // Nonce is already checked
         caller_account.info.nonce = caller_account.info.nonce.saturating_add(1);
-        #[cfg(feature = "telos")]
+        #[cfg(feature = "telos")] {
+        if let TransactTo::Call(address) = env.tx.transact_to {
+            if env.tx.chain_id == Some(3) && address == Address::ZERO && env.tx.nonce.unwrap() == 0 && caller_account.info.nonce > 1 {
+                caller_account.info.nonce = caller_account.info.nonce.saturating_sub(1);
+            }
+        }
         if env.tx.caller == Address::ZERO {
             caller_account.info.nonce = 0;
+        }
+        if caller_account.info.nonce == env.tx.nonce.unwrap() && caller_account.info.nonce == 1 {
+            caller_account.info.nonce = caller_account.info.nonce.saturating_add(1);
+        }
         }
     }
 

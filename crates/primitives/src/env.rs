@@ -210,9 +210,19 @@ impl Env {
             let state = account.info.nonce;
             match tx.cmp(&state) {
                 Ordering::Greater => {
+                    #[cfg(feature = "telos")]
+                    if !(tx == 1 && state == 0) {
+                        return Err(InvalidTransaction::NonceTooHigh { tx, state });
+                    }
+                    #[cfg(not(feature = "telos"))]
                     return Err(InvalidTransaction::NonceTooHigh { tx, state });
                 }
                 Ordering::Less => {
+                    #[cfg(feature = "telos")]
+                    if !(tx == 0 && self.tx.chain_id == Some(3)) {
+                        return Err(InvalidTransaction::NonceTooLow { tx, state });
+                    }
+                    #[cfg(not(feature = "telos"))]
                     return Err(InvalidTransaction::NonceTooLow { tx, state });
                 }
                 _ => {}
