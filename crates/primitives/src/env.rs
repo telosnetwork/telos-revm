@@ -42,6 +42,10 @@ impl Env {
         if let Some(priority_fee) = self.tx.gas_priority_fee {
             min(self.tx.gas_price, self.block.basefee + priority_fee)
         } else {
+            // TODO: Used fixed gas price, it should be retrieved from telos config table
+            #[cfg(feature = "telos")]
+            return min(self.tx.gas_price, U256::from_str_radix("499809179185",10).unwrap());
+            #[cfg(not(feature = "telos"))]
             self.tx.gas_price
         }
     }
