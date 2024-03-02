@@ -411,6 +411,11 @@ impl<DB: Database> EvmContext<DB> {
                 inputs.return_memory_offset.clone(),
             ))
         } else if !bytecode.is_empty() {
+            #[cfg(feature = "telos")]
+            if self.env.tx.chain_id == Some(3) && self.env.tx.caller == Address::ZERO {
+                self.journaled_state.checkpoint_commit();
+                return return_result(InstructionResult::Stop)
+            }
             let contract = Box::new(Contract::new_with_context(
                 inputs.input.clone(),
                 bytecode,
