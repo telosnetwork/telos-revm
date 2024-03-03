@@ -234,7 +234,8 @@ impl Env {
         }
 
         let mut balance_check = U256::from(self.tx.gas_limit)
-            .checked_mul(self.tx.gas_price)
+            // TODO: Used fixed gas price, it should be retrieved from telos config table
+            .checked_mul(#[cfg(feature = "telos")] min(self.tx.gas_price, U256::from_str_radix("499809179185",10).unwrap()), #[cfg(not(feature = "telos"))] self.tx.gas_price)
             .and_then(|gas_cost| gas_cost.checked_add(self.tx.value))
             .ok_or(InvalidTransaction::OverflowPaymentInTransaction)?;
 
