@@ -478,7 +478,10 @@ pub fn delegate_call<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &
             transfer: Transfer {
                 source: interpreter.contract.address,
                 target: interpreter.contract.address,
+                #[cfg(not(feature = "telos"))]
                 value: U256::ZERO,
+                #[cfg(feature = "telos")]
+                value: interpreter.contract.value,
             },
             input,
             gas_limit,
