@@ -565,6 +565,9 @@ pub struct TxEnv {
     #[cfg_attr(feature = "serde", serde(flatten))]
     #[cfg(feature = "optimism")]
     pub optimism: OptimismFields,
+
+    #[cfg(feature = "telos")]
+    pub first_new_address: Option<Address>,
 }
 
 impl TxEnv {
@@ -600,6 +603,8 @@ impl Default for TxEnv {
             max_fee_per_blob_gas: None,
             #[cfg(feature = "optimism")]
             optimism: OptimismFields::default(),
+            #[cfg(feature = "telos")]
+            first_new_address: None,
         }
     }
 }

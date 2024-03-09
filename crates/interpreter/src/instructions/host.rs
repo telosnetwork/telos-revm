@@ -342,6 +342,18 @@ pub fn call<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut H) {
         return;
     };
 
+    #[cfg(feature = "telos")]
+    let is_new_address = !host.load_account(to).unwrap().1;
+    #[cfg(feature = "telos")]
+    if host.env_mut().tx.first_new_address.is_none() && is_new_address{
+        host.env_mut().tx.first_new_address = Some(to)
+    }
+    #[cfg(feature = "telos")]
+    let new_to = match is_new_address {
+        true => host.env().tx.first_new_address.or(Some(to)).unwrap(),
+        false => to,
+    };
+
     gas!(interpreter, gas_limit);
 
     // add call stipend if there is value to be transferred.
@@ -355,15 +367,24 @@ pub fn call<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut H) {
             contract: to,
             transfer: Transfer {
                 source: interpreter.contract.address,
+                #[cfg(not(feature = "telos"))]
                 target: to,
+                #[cfg(feature = "telos")]
+                target: new_to,
                 value,
             },
             input,
             gas_limit,
             context: CallContext {
+                #[cfg(not(feature = "telos"))]
                 address: to,
+                #[cfg(feature = "telos")]
+                address: new_to,
                 caller: interpreter.contract.address,
+                #[cfg(not(feature = "telos"))]
                 code_address: to,
+                #[cfg(feature = "telos")]
+                code_address: new_to,
                 apparent_value: value,
                 scheme: CallScheme::Call,
             },
@@ -494,6 +515,18 @@ pub fn static_call<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mu
     };
     gas!(interpreter, gas_limit);
 
+    #[cfg(feature = "telos")]
+    let is_new_address = !host.load_account(to).unwrap().1;
+    #[cfg(feature = "telos")]
+    if host.env_mut().tx.first_new_address.is_none() && is_new_address{
+        host.env_mut().tx.first_new_address = Some(to)
+    }
+    #[cfg(feature = "telos")]
+    let new_to = match is_new_address {
+        true => host.env().tx.first_new_address.or(Some(to)).unwrap(),
+        false => to,
+    };
+
     // Call host to interact with target contract
     interpreter.next_action = InterpreterAction::Call {
         inputs: Box::new(CallInputs {
@@ -508,9 +541,15 @@ pub fn static_call<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mu
             input,
             gas_limit,
             context: CallContext {
+                #[cfg(not(feature = "telos"))]
                 address: to,
+                #[cfg(feature = "telos")]
+                address: new_to,
                 caller: interpreter.contract.address,
+                #[cfg(not(feature = "telos"))]
                 code_address: to,
+                #[cfg(feature = "telos")]
+                code_address: new_to,
                 apparent_value: value,
                 scheme: CallScheme::StaticCall,
             },
