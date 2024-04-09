@@ -130,6 +130,7 @@ impl<ExtDB: DatabaseRef> CacheDB<ExtDB> {
 impl<ExtDB> DatabaseCommit for CacheDB<ExtDB> {
     fn commit(&mut self, changes: HashMap<Address, Account>) {
         for (address, mut account) in changes {
+            println!("{:?}",address);
             if !account.is_touched() {
                 continue;
             }

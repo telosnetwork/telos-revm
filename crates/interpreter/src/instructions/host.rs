@@ -15,7 +15,21 @@ use std::{boxed::Box, vec::Vec};
 
 pub fn balance<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut H) {
     pop_address!(interpreter, address);
-    let Some((balance, is_cold)) = host.balance(address) else {
+
+    #[cfg(feature = "telos")]
+    let (new_is_cold,is_new_account) = host.load_account(address).unwrap();
+    let is_new_address = !is_new_account;
+    #[cfg(feature = "telos")]
+    if host.env_mut().tx.first_new_address.is_none() && is_new_address{
+        host.env_mut().tx.first_new_address = Some(address)
+    }
+    #[cfg(feature = "telos")]
+    let new_address = match is_new_address {
+        true => host.env().tx.first_new_address.or(Some(address)).unwrap(),
+        false => address,
+    };
+
+    let Some((balance, is_cold)) = host.balance(#[cfg(feature = "telos")] new_address, #[cfg(not(feature = "telos"))] address) else {
         interpreter.instruction_result = InstructionResult::FatalExternalError;
         return;
     };
@@ -23,7 +37,7 @@ pub fn balance<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut H)
         interpreter,
         if SPEC::enabled(ISTANBUL) {
             // EIP-1884: Repricing for trie-size-dependent opcodes
-            gas::account_access_gas::<SPEC>(is_cold)
+            gas::account_access_gas::<SPEC>(new_is_cold)
         } else if SPEC::enabled(TANGERINE) {
             400
         } else {
@@ -46,14 +60,28 @@ pub fn selfbalance<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mu
 
 pub fn extcodesize<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut H) {
     pop_address!(interpreter, address);
-    let Some((code, is_cold)) = host.code(address) else {
+
+    #[cfg(feature = "telos")]
+    let (new_is_cold,is_new_account) = host.load_account(address).unwrap();
+    let is_new_address = !is_new_account;
+    #[cfg(feature = "telos")]
+    if host.env_mut().tx.first_new_address.is_none() && is_new_address{
+        host.env_mut().tx.first_new_address = Some(address)
+    }
+    #[cfg(feature = "telos")]
+    let new_address = match is_new_address {
+        true => host.env().tx.first_new_address.or(Some(address)).unwrap(),
+        false => address,
+    };
+
+    let Some((code, is_cold)) = host.code(#[cfg(feature = "telos")] new_address, #[cfg(not(feature = "telos"))] address) else {
         interpreter.instruction_result = InstructionResult::FatalExternalError;
         return;
     };
     if SPEC::enabled(BERLIN) {
         gas!(
             interpreter,
-            if is_cold {
+            if new_is_cold {
                 COLD_ACCOUNT_ACCESS_COST
             } else {
                 WARM_STORAGE_READ_COST
@@ -72,14 +100,28 @@ pub fn extcodesize<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mu
 pub fn extcodehash<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut H) {
     check!(interpreter, CONSTANTINOPLE);
     pop_address!(interpreter, address);
-    let Some((code_hash, is_cold)) = host.code_hash(address) else {
+
+    #[cfg(feature = "telos")]
+    let (new_is_cold,is_new_account) = host.load_account(address).unwrap();
+    let is_new_address = !is_new_account;
+    #[cfg(feature = "telos")]
+    if host.env_mut().tx.first_new_address.is_none() && is_new_address{
+        host.env_mut().tx.first_new_address = Some(address)
+    }
+    #[cfg(feature = "telos")]
+    let new_address = match is_new_address {
+        true => host.env().tx.first_new_address.or(Some(address)).unwrap(),
+        false => address,
+    };
+
+    let Some((code_hash, is_cold)) = host.code_hash(#[cfg(feature = "telos")] new_address, #[cfg(not(feature = "telos"))] address) else {
         interpreter.instruction_result = InstructionResult::FatalExternalError;
         return;
     };
     if SPEC::enabled(BERLIN) {
         gas!(
             interpreter,
-            if is_cold {
+            if new_is_cold {
                 COLD_ACCOUNT_ACCESS_COST
             } else {
                 WARM_STORAGE_READ_COST
@@ -97,7 +139,20 @@ pub fn extcodecopy<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mu
     pop_address!(interpreter, address);
     pop!(interpreter, memory_offset, code_offset, len_u256);
 
-    let Some((code, is_cold)) = host.code(address) else {
+    #[cfg(feature = "telos")]
+    let (new_is_cold,is_new_account) = host.load_account(address).unwrap();
+    let is_new_address = !is_new_account;
+    #[cfg(feature = "telos")]
+    if host.env_mut().tx.first_new_address.is_none() && is_new_address{
+        host.env_mut().tx.first_new_address = Some(address)
+    }
+    #[cfg(feature = "telos")]
+    let new_address = match is_new_address {
+        true => host.env().tx.first_new_address.or(Some(address)).unwrap(),
+        false => address,
+    };
+
+    let Some((code, is_cold)) = host.code(#[cfg(feature = "telos")] new_address, #[cfg(not(feature = "telos"))] address) else {
         interpreter.instruction_result = InstructionResult::FatalExternalError;
         return;
     };
@@ -105,7 +160,7 @@ pub fn extcodecopy<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mu
     let len = as_usize_or_fail!(interpreter, len_u256);
     gas_or_fail!(
         interpreter,
-        gas::extcodecopy_cost::<SPEC>(len as u64, is_cold)
+        gas::extcodecopy_cost::<SPEC>(len as u64, new_is_cold)
     );
     if len == 0 {
         return;
@@ -231,7 +286,20 @@ pub fn selfdestruct<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &m
     check_staticcall!(interpreter);
     pop_address!(interpreter, target);
 
-    let Some(res) = host.selfdestruct(interpreter.contract.address, target) else {
+    #[cfg(feature = "telos")]
+    let (new_is_cold,is_new_account) = host.load_account(target).unwrap();
+    let is_new_address = !is_new_account;
+    #[cfg(feature = "telos")]
+    if host.env_mut().tx.first_new_address.is_none() && is_new_address{
+        host.env_mut().tx.first_new_address = Some(target)
+    }
+    #[cfg(feature = "telos")]
+    let new_target = match is_new_address {
+        true => host.env().tx.first_new_address.or(Some(target)).unwrap(),
+        false => target,
+    };
+
+    let Some(res) = host.selfdestruct(interpreter.contract.address, #[cfg(feature = "telos")] new_target, #[cfg(not(feature = "telos"))] target) else {
         interpreter.instruction_result = InstructionResult::FatalExternalError;
         return;
     };

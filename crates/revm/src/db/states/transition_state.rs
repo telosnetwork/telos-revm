@@ -32,6 +32,8 @@ impl TransitionState {
 
     pub fn add_transitions(&mut self, transitions: Vec<(Address, TransitionAccount)>) {
         for (address, account) in transitions {
+            println!("ACCOUNT:");
+            println!("{:?} {} {} {:?}",address,account.clone().info.unwrap().balance.to_string(),account.clone().info.unwrap().nonce,account.clone().info.unwrap().code.unwrap_or_default().bytecode);
             match self.transitions.entry(address) {
                 Entry::Occupied(entry) => {
                     let entry = entry.into_mut();
