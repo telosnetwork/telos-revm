@@ -370,7 +370,11 @@ pub fn call<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut H) {
                 #[cfg(not(feature = "telos"))]
                 target: to,
                 #[cfg(feature = "telos")]
-                target: new_to,
+                target: if host.env().tx.revision_number == 0 {
+                    new_to
+                } else {
+                    to
+                },
                 value,
             },
             input,
@@ -379,12 +383,20 @@ pub fn call<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut H) {
                 #[cfg(not(feature = "telos"))]
                 address: to,
                 #[cfg(feature = "telos")]
-                address: new_to,
+                address: if host.env().tx.revision_number == 0 {
+                    new_to
+                } else {
+                    to
+                },
                 caller: interpreter.contract.address,
                 #[cfg(not(feature = "telos"))]
                 code_address: to,
                 #[cfg(feature = "telos")]
-                code_address: new_to,
+                code_address: if host.env().tx.revision_number == 0 {
+                    new_to
+                } else {
+                    to
+                },
                 apparent_value: value,
                 scheme: CallScheme::Call,
             },
@@ -481,7 +493,11 @@ pub fn delegate_call<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &
                 #[cfg(not(feature = "telos"))]
                 value: U256::ZERO,
                 #[cfg(feature = "telos")]
-                value: interpreter.contract.value,
+                value: if host.env().tx.revision_number == 0 {
+                    interpreter.contract.value
+                } else {
+                    U256::ZERO
+                }
             },
             input,
             gas_limit,
@@ -547,12 +563,20 @@ pub fn static_call<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mu
                 #[cfg(not(feature = "telos"))]
                 address: to,
                 #[cfg(feature = "telos")]
-                address: new_to,
+                address: if host.env().tx.revision_number == 0 {
+                    new_to
+                } else {
+                    to
+                },
                 caller: interpreter.contract.address,
                 #[cfg(not(feature = "telos"))]
                 code_address: to,
                 #[cfg(feature = "telos")]
-                code_address: new_to,
+                code_address: if host.env().tx.revision_number == 0 {
+                    new_to
+                } else {
+                    to
+                },
                 apparent_value: value,
                 scheme: CallScheme::StaticCall,
             },
