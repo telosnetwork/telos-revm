@@ -11,6 +11,8 @@ use crate::{
 };
 use core::cmp::min;
 use revm_primitives::BLOCK_HASH_HISTORY;
+#[cfg(feature = "telos")]
+use revm_primitives::keccak256;
 use std::{boxed::Box, vec::Vec};
 
 pub fn balance<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut H) {
@@ -128,10 +130,15 @@ pub fn blockhash<H: Host>(interpreter: &mut Interpreter, host: &mut H) {
         let diff = as_usize_saturated!(diff);
         // blockhash should push zero if number is same as current block number.
         if diff <= BLOCK_HASH_HISTORY && diff != 0 {
+            #[cfg(not(feature = "telos"))]
             let Some(hash) = host.block_hash(*number) else {
                 interpreter.instruction_result = InstructionResult::FatalExternalError;
                 return;
             };
+            #[cfg(feature = "telos")]
+            let number_string = number.to_string();
+            #[cfg(feature = "telos")]
+            let hash = keccak256(number_string);
             *number = U256::from_be_bytes(hash.0);
             return;
         }
