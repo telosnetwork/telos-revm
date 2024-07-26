@@ -394,6 +394,7 @@ impl<DB: Database> EvmContext<DB> {
             &inputs.transfer.target,
             inputs.transfer.value,
             &mut self.db,
+            #[cfg(feature = "telos")] (inputs.transfer.target == Address::ZERO && self.env.tx.chain_id == Some(3)),
         )? {
             self.journaled_state.checkpoint_revert(checkpoint);
             return return_result(result);

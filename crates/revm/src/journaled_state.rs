@@ -168,6 +168,8 @@ impl JournaledState {
         to: &Address,
         balance: U256,
         db: &mut DB,
+        #[cfg(feature = "telos")]
+        avoid_increase_dest: bool,
     ) -> Result<Option<InstructionResult>, EVMError<DB::Error>> {
         // load accounts
         self.load_account(*from, db)?;
@@ -192,7 +194,7 @@ impl JournaledState {
         };
         *to_balance = to_balance_decr;
         #[cfg(feature = "telos")]
-        if *to == Address::ZERO && self.depth == 1 {
+        if avoid_increase_dest {
             *to_balance = to_balance.checked_sub(balance).unwrap();
         }
         // Overflow of U256 balance is not possible to happen on mainnet. We don't bother to return funds from from_acc.
