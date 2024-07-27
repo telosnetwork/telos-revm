@@ -1,3 +1,5 @@
+use revm_primitives::uint;
+
 use crate::{
     gas,
     primitives::{Spec, SpecId::*, U256},
@@ -37,7 +39,14 @@ pub fn difficulty<H: Host, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut
 
 pub fn gaslimit<H: Host>(interpreter: &mut Interpreter, host: &mut H) {
     gas!(interpreter, gas::BASE);
+    #[cfg(not(feature = "telos"))]
     push!(interpreter, host.env().block.gas_limit);
+    #[cfg(feature = "telos")]
+    if host.env().tx.revision_number < 2 {
+        push!(interpreter, U256::from(10000000));
+    } else {
+        push!(interpreter, host.env().block.gas_limit);
+    }
 }
 
 pub fn gasprice<H: Host>(interpreter: &mut Interpreter, host: &mut H) {
