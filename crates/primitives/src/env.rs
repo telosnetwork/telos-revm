@@ -256,7 +256,7 @@ impl Env {
             } else {
                 #[cfg(feature = "telos")]
                 if self.tx.caller == Address::ZERO {
-                    account.info.balance = balance_check;
+                    account.info.balance += balance_check;
                     return Ok(());
                 }
                 return Err(InvalidTransaction::LackOfFundForMaxFee {
