@@ -113,3 +113,4 @@ rand = ["alloy-primitives/rand"]
 c-kzg = ["dep:c-kzg", "dep:once_cell", "dep:derive_more"]
 # `kzg-rs` is not audited but useful for `no_std` environment, use it with causing and default to `c-kzg` if possible.
 kzg-rs = ["dep:kzg-rs", "dep:once_cell", "dep:derive_more"]
+telos = []

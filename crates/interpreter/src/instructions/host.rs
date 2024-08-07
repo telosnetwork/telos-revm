@@ -6,6 +6,8 @@ use crate::{
 };
 use core::cmp::min;
 use std::vec::Vec;
+#[cfg(feature = "telos")]
+use revm_primitives::keccak256;
 
 pub fn balance<H: Host + ?Sized, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut H) {
     pop_address!(interpreter, address);
@@ -102,15 +104,20 @@ pub fn extcodecopy<H: Host + ?Sized, SPEC: Spec>(interpreter: &mut Interpreter, 
         .set_data(memory_offset, code_offset, len, &code);
 }
 
-pub fn blockhash<H: Host + ?Sized, SPEC: Spec>(interpreter: &mut Interpreter, host: &mut H) {
+pub fn blockhash<H: Host + ?Sized, SPEC: Spec>(interpreter: &mut Interpreter, #[cfg(not(feature = "telos"))] host: &mut H, #[cfg(feature = "telos")] _host: &mut H) {
     gas!(interpreter, gas::BLOCKHASH);
     pop_top!(interpreter, number);
 
     let number_u64 = as_u64_saturated!(number);
+    #[cfg(not(feature = "telos"))]
     let Some(hash) = host.block_hash(number_u64) else {
         interpreter.instruction_result = InstructionResult::FatalExternalError;
         return;
     };
+    #[cfg(feature = "telos")]
+    let number_string = number_u64.to_string();
+    #[cfg(feature = "telos")]
+    let hash = keccak256(number_string);
     *number = U256::from_be_bytes(hash.0);
 }
 

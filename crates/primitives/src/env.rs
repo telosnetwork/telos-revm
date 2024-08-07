@@ -48,6 +48,9 @@ impl Env {
         if let Some(priority_fee) = self.tx.gas_priority_fee {
             min(self.tx.gas_price, self.block.basefee + priority_fee)
         } else {
+            #[cfg(feature = "telos")]
+            return min(self.tx.gas_price, self.tx.fixed_gas_price);
+            #[cfg(not(feature = "telos"))]
             self.tx.gas_price
         }
     }
@@ -98,6 +101,11 @@ impl Env {
     pub fn validate_tx<SPEC: Spec>(&self) -> Result<(), InvalidTransaction> {
         // Check if the transaction's chain id is correct
         if let Some(tx_chain_id) = self.tx.chain_id {
+            #[cfg(feature = "telos")]
+            if tx_chain_id != self.cfg.chain_id && self.tx.chain_id != Some(3) {
+                return Err(InvalidTransaction::InvalidChainId);
+            }
+            #[cfg(not(feature = "telos"))]
             if tx_chain_id != self.cfg.chain_id {
                 return Err(InvalidTransaction::InvalidChainId);
             }
@@ -228,9 +236,19 @@ impl Env {
             let state = account.info.nonce;
             match tx.cmp(&state) {
                 Ordering::Greater => {
+                    #[cfg(feature = "telos")]
+                    if !(tx == 1 && state == 0) {
+                        return Err(InvalidTransaction::NonceTooHigh { tx, state });
+                    }
+                    #[cfg(not(feature = "telos"))]
                     return Err(InvalidTransaction::NonceTooHigh { tx, state });
                 }
                 Ordering::Less => {
+                    #[cfg(feature = "telos")]
+                    if !(tx == 0 && self.tx.chain_id == Some(3)) {
+                        return Err(InvalidTransaction::NonceTooLow { tx, state });
+                    }
+                    #[cfg(not(feature = "telos"))]
                     return Err(InvalidTransaction::NonceTooLow { tx, state });
                 }
                 _ => {}
@@ -238,7 +256,7 @@ impl Env {
         }
 
         let mut balance_check = U256::from(self.tx.gas_limit)
-            .checked_mul(self.tx.gas_price)
+            .checked_mul(#[cfg(feature = "telos")] min(self.tx.gas_price, self.tx.fixed_gas_price), #[cfg(not(feature = "telos"))] self.tx.gas_price)
             .and_then(|gas_cost| gas_cost.checked_add(self.tx.value))
             .ok_or(InvalidTransaction::OverflowPaymentInTransaction)?;
 
@@ -257,6 +275,11 @@ impl Env {
                 // Add transaction cost to balance to ensure execution doesn't fail.
                 account.info.balance = balance_check;
             } else {
+                #[cfg(feature = "telos")]
+                if self.tx.caller == Address::ZERO {
+                    account.info.balance += balance_check;
+                    return Ok(());
+                }
                 return Err(InvalidTransaction::LackOfFundForMaxFee {
                     fee: Box::new(balance_check),
                     balance: Box::new(account.info.balance),
@@ -586,6 +609,15 @@ pub struct TxEnv {
     #[cfg(feature = "optimism")]
     /// Optimism fields.
     pub optimism: OptimismFields,
+
+    #[cfg(feature = "telos")]
+    pub first_new_address: Option<Address>,
+
+    #[cfg(feature = "telos")]
+    pub revision_number: u64,
+
+    #[cfg(feature = "telos")]
+    pub fixed_gas_price: U256,
 }
 
 pub enum TxType {
@@ -629,6 +661,12 @@ impl Default for TxEnv {
             authorization_list: None,
             #[cfg(feature = "optimism")]
             optimism: OptimismFields::default(),
+            #[cfg(feature = "telos")]
+            first_new_address: None,
+            #[cfg(feature = "telos")]
+            fixed_gas_price: U256::ZERO,
+            #[cfg(feature = "telos")]
+            revision_number: 0,
         }
     }
 }

@@ -182,6 +182,9 @@ impl<DB: Database> EvmContext<DB> {
         // Create subroutine checkpoint
         let checkpoint = self.journaled_state.checkpoint();
 
+        #[cfg(feature = "telos")]
+        let tx_chain_id = self.env.tx.chain_id;
+
         // Touch address. For "EIP-158 State Clear", this will erase empty accounts.
         match inputs.value {
             // if transfer value is zero, load account and force the touch.
@@ -197,6 +200,7 @@ impl<DB: Database> EvmContext<DB> {
                     &inputs.target_address,
                     value,
                     &mut self.inner.db,
+                    #[cfg(feature = "telos")] (inputs.target_address == Address::ZERO && tx_chain_id == Some(3))
                 )? {
                     self.journaled_state.checkpoint_revert(checkpoint);
                     return return_result(result);
@@ -205,6 +209,11 @@ impl<DB: Database> EvmContext<DB> {
             _ => {}
         };
 
+        #[cfg(feature = "telos")]
+        if self.env.tx.chain_id == Some(3) && self.env.tx.caller == Address::ZERO {
+            self.journaled_state.checkpoint_commit();
+            return return_result(InstructionResult::Stop)
+        }
         if let Some(result) = self.call_precompile(&inputs.bytecode_address, &inputs.input, gas)? {
             if matches!(result.result, return_ok!()) {
                 self.journaled_state.checkpoint_commit();
