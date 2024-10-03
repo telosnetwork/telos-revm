@@ -119,3 +119,4 @@ c-kzg = ["dep:c-kzg"]
 # `kzg-rs` is not audited but useful for `no_std` environment.
 #   use it with causing and default to `c-kzg` if possible!
 kzg-rs = ["dep:kzg-rs"]
+telos = []
