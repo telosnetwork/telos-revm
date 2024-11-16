@@ -202,7 +202,7 @@ impl<DB: Database> EvmContext<DB> {
                     &inputs.target_address,
                     value,
                     &mut self.inner.db,
-                    #[cfg(feature = "telos")] (inputs.target_address == Address::ZERO && tx_chain_id == Some(3))
+                    #[cfg(feature = "telos")] (inputs.caller != Address::ZERO && inputs.target_address == Address::ZERO && tx_chain_id == Some(3))
                 )? {
                     self.journaled_state.checkpoint_revert(checkpoint);
                     return return_result(result);
