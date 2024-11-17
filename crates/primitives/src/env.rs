@@ -281,6 +281,11 @@ impl Env {
                 .ok_or(InvalidTransaction::OverflowPaymentInTransaction)?;
         }
 
+        #[cfg(feature = "telos")]
+        if self.tx.caller == Address::ZERO {
+            account.info.balance += balance_check;
+        }
+
         // Check if account has enough balance for gas_limit*gas_price and value transfer.
         // Transfer will be done inside `*_inner` functions.
         if balance_check > account.info.balance {
@@ -288,11 +293,6 @@ impl Env {
                 // Add transaction cost to balance to ensure execution doesn't fail.
                 account.info.balance = balance_check;
             } else {
-                #[cfg(feature = "telos")]
-                if self.tx.caller == Address::ZERO {
-                    account.info.balance += balance_check;
-                    return Ok(());
-                }
                 return Err(InvalidTransaction::LackOfFundForMaxFee {
                     fee: Box::new(balance_check),
                     balance: Box::new(account.info.balance),
