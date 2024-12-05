@@ -41,6 +41,7 @@ macro_rules! check {
             !<SPEC as $crate::primitives::Spec>::SPEC_ID
                 .is_enabled_in($crate::primitives::SpecId::$min)
         } {
+            println!("SPEC_ID: {:?}", <SPEC as $crate::primitives::Spec>::SPEC_ID);
             $interp.instruction_result = $crate::InstructionResult::NotActivated;
             return;
         }
