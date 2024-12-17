@@ -424,6 +424,18 @@ pub fn call<H: Host + ?Sized, SPEC: Spec>(interpreter: &mut Interpreter, host: &
 
     gas!(interpreter, gas_limit);
 
+    #[cfg(feature = "telos")]
+    let is_new_address = host.load_account_delegated(to).unwrap().is_empty;
+    #[cfg(feature = "telos")]
+    if host.env_mut().tx.first_new_address.is_none() && is_new_address{
+        host.env_mut().tx.first_new_address = Some(to)
+    }
+    #[cfg(feature = "telos")]
+    let new_to = match is_new_address {
+        true => host.env().tx.first_new_address.or(Some(to)).unwrap(),
+        false => to,
+    };
+
     // add call stipend if there is value to be transferred.
     if has_transfer {
         gas_limit = gas_limit.saturating_add(gas::CALL_STIPEND);
@@ -434,7 +446,14 @@ pub fn call<H: Host + ?Sized, SPEC: Spec>(interpreter: &mut Interpreter, host: &
         inputs: Box::new(CallInputs {
             input,
             gas_limit,
+            #[cfg(not(feature = "telos"))]
             target_address: to,
+            #[cfg(feature = "telos")]
+            target_address: if host.env().tx.revision_number == 0 {
+                new_to
+            } else {
+                to
+            },
             caller: interpreter.contract.target_address,
             bytecode_address: to,
             value: CallValue::Transfer(value),
@@ -558,12 +577,31 @@ pub fn static_call<H: Host + ?Sized, SPEC: Spec>(interpreter: &mut Interpreter, 
     };
     gas!(interpreter, gas_limit);
 
+    #[cfg(feature = "telos")]
+    let is_new_address = host.load_account_delegated(to).unwrap().is_empty;
+    #[cfg(feature = "telos")]
+    if host.env_mut().tx.first_new_address.is_none() && is_new_address{
+        host.env_mut().tx.first_new_address = Some(to)
+    }
+    #[cfg(feature = "telos")]
+    let new_to = match is_new_address {
+        true => host.env().tx.first_new_address.or(Some(to)).unwrap(),
+        false => to,
+    };
+
     // Call host to interact with target contract
     interpreter.next_action = InterpreterAction::Call {
         inputs: Box::new(CallInputs {
             input,
             gas_limit,
+            #[cfg(not(feature = "telos"))]
             target_address: to,
+            #[cfg(feature = "telos")]
+            target_address: if host.env().tx.revision_number == 0 {
+                new_to
+            } else {
+                to
+            },
             caller: interpreter.contract.target_address,
             bytecode_address: to,
             value: CallValue::Transfer(U256::ZERO),

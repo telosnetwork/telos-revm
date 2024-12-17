@@ -29,6 +29,10 @@ pub fn reward_beneficiary<SPEC: Spec, EXT, DB: Database>(
     context: &mut Context<EXT, DB>,
     gas: &Gas,
 ) -> Result<(), EVMError<DB::Error>> {
+    #[cfg(feature = "telos")]
+    if context.evm.env.cfg.chain_id == 40 || context.evm.env.cfg.chain_id == 41 {
+        return Ok(());
+    }
     let beneficiary = context.evm.env.block.coinbase;
     let effective_gas_price = context.evm.env.effective_gas_price();
 

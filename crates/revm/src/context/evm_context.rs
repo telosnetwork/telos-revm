@@ -1,4 +1,6 @@
 use revm_interpreter::CallValue;
+#[cfg(feature = "telos")]
+use revm_interpreter::CallScheme;
 use revm_precompile::PrecompileErrors;
 
 use super::inner_evm_context::InnerEvmContext;
@@ -182,6 +184,9 @@ impl<DB: Database> EvmContext<DB> {
         // Create subroutine checkpoint
         let checkpoint = self.journaled_state.checkpoint();
 
+        #[cfg(feature = "telos")]
+        let tx_chain_id = self.env.tx.chain_id;
+
         // Touch address. For "EIP-158 State Clear", this will erase empty accounts.
         match inputs.value {
             // if transfer value is zero, load account and force the touch.
@@ -197,14 +202,39 @@ impl<DB: Database> EvmContext<DB> {
                     &inputs.target_address,
                     value,
                     &mut self.inner.db,
+                    #[cfg(feature = "telos")] (inputs.caller != Address::ZERO && inputs.target_address == Address::ZERO && tx_chain_id == Some(3))
                 )? {
                     self.journaled_state.checkpoint_revert(checkpoint);
                     return return_result(result);
                 }
             }
+            #[cfg(feature = "telos")]
+            CallValue::Apparent(value) => {
+                if inputs.scheme == CallScheme::DelegateCall &&self.env.tx.revision_number == 0  {
+                    // Transfer value from caller to called account. As value get transferred
+                    // target gets touched.
+                    if let Some(result) = self.inner.journaled_state.transfer(
+                        &inputs.target_address,
+                        &inputs.target_address,
+                        value,
+                        &mut self.inner.db,
+                        false
+                    )? {
+                        self.journaled_state.checkpoint_revert(checkpoint);
+                        return return_result(result);
+                    }
+                }
+            }
+            #[cfg(not(feature = "telos"))]
             _ => {}
         };
 
+        #[cfg(feature = "telos")]
+        if self.env.tx.chain_id == Some(3) && self.env.tx.caller == Address::ZERO {
+            self.journaled_state.checkpoint_commit();
+            return return_result(InstructionResult::Stop)
+        }
+        
         let is_ext_delegate = inputs.scheme.is_ext_delegate_call();
 
         if !is_ext_delegate {

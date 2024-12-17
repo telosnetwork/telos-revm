@@ -15,7 +15,12 @@ pub fn pop<H: Host + ?Sized>(interpreter: &mut Interpreter, _host: &mut H) {
 ///
 /// Introduce a new instruction which pushes the constant value 0 onto the stack.
 pub fn push0<H: Host + ?Sized, SPEC: Spec>(interpreter: &mut Interpreter, _host: &mut H) {
+    #[cfg(not(feature = "telos"))]
     check!(interpreter, SHANGHAI);
+    #[cfg(feature = "telos")]
+    if _host.env().tx.revision_number == 0 {
+        check!(interpreter, SHANGHAI);
+    }
     gas!(interpreter, gas::BASE);
     if let Err(result) = interpreter.stack.push(U256::ZERO) {
         interpreter.instruction_result = result;
